@@ -3,7 +3,7 @@
 This works by running a script on the Shelly relay that transmits a BLE announcement, which can be detected by an ESPHome device. The initial goal of this is to allow a relay to be in "detached mode" and keep power to a smart bulb, then on a toggle of input, it can send a signal via BLE directly to the bulb to toggle state. This means you are not dependent on an intermediary service such as Home Assistant to send the command.
 
 ## Requirements:
-- A Shelly relay that has Bluetooth support and which has at least firmware version 2.0. Gen3+ devices should be fine, but some Gen2 devices may also work if they meet the requirements.
+- A Shelly relay that has Bluetooth support and which has at least firmware version 2.0.0 Gen3+ devices should be fine, but some Gen2 devices may also work if they meet the requirements.
 - An ESPHome device that supports Bluetooth (e.g. ESP32).
 - Know the MAC address of the Shelly relay's Bluetooth adaptor (can be found in the WebUI)
 
