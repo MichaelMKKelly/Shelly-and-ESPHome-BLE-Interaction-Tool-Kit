@@ -11,7 +11,7 @@ This Works by running a script on the shelly relay that transmits a BLE announce
 - On the Shelly relay's WebUI go to the Scripts section and press on "Create script"
 - Name the script something appropriate
 - Paste in the contents of the file `shelly-relay-script.mjs` in this repo into the code section
-- OPTIONAL: If required for multiple input devices then change the `InputToAnnounce` used from 0 to another
+- OPTIONAL: If required for multiple input devices then change the `InputToAnnounce` variable used from 0 to another
 - Press Save
 - Press Run
 - Return to the main page of the scripts section
@@ -24,6 +24,47 @@ This will have the relay send out the following announcements:
 
 ## ESPhome Device Config
 
-You now need to include the ESPHome config for this functionality to your devices config.
+- You now need to include the ESPHome config for this functionality to your devices config.
 
 This can be done directly from this repo via remote package:
+
+```
+packages:
+  shelly_relay_control: github://MichaelMKKelly/Shelly-and-ESPHome-BLE-Interaction-Tool-Kit/Shelly-Relay-Input-Announcer/shelly-relay-control.yml@main  
+  ```
+
+- Then you need to add a script called `input_change_actions` to put in your desried actions for what to happen when the state of the input changes:
+
+```
+script:
+  - id: input_change_actions
+    then:
+      - switch.toggle:
+          id: test_switch
+```
+Change `switch.toggle` in the example to whatever actions you want to run on a state change.
+
+- OPTIONAL: You can set the default value of the relay mac address directly in the config via a substitution if you wish. It will remain changable via a text field inside of Home Assistant or by other method of changing text fields.
+
+```
+substitutions:
+  default_shelly_relay_mac: AA:AA:AA:AA:AA:AA
+```
+
+- Compile and flash your firmware.
+
+## Set Mac Address
+You now need to set the text field for the mac address to the mac address of the Shelly relay's bluetooth adaptor.
+
+Example in Home Assistant Device Page:
+
+![alt text](image.png)
+
+Example in `web_server`:
+
+![alt text](image-1.png)
+
+NB: If you set the default in the config in the optional step mentioned above then it should be already set to your correct MAC address.
+
+## Debugging and/or more complicated setups.
+There is also an Event component that will report events of type `init` / `on` / `off` which can be used for more complicated or specific automations from Home Assistant. It is also good debugging tool.
