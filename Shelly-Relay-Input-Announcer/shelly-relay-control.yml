@@ -1,0 +1,96 @@
+# Shelly relay control
+
+substitutions:
+  default_shelly_relay_mac: AA:AA:AA:AA:AA:AA
+
+esp32_ble_tracker:
+  on_ble_advertise:
+    - then:
+        - lambda: |-
+            // x is the ESPBTDevice that sent the advertisement. The Shelly
+            // MAC lives in a runtime-editable text_input, so it is matched
+            // here (hex digits only, case-insensitive) instead of in a
+            // compile-time filter.
+            char mac_buf[32];
+            auto norm_mac = [](const std::string &in) {
+              std::string out;
+              for (char c : in) {
+                if (c >= 'a' && c <= 'f') c = char(c - 'a' + 'A');
+                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')) out += c;
+              }
+              return out;
+            };
+            if (norm_mac(std::string(x.address_str_to(mac_buf))) !=
+                norm_mac(id(shelly_relay_mac).state)) {
+              return;
+            }
+            // Find the Shelly (Allterco 0x0BA9) manufacturer data; the
+            // payload has the 2-byte manufacturer ID stripped. The Shelly
+            // script sends "t1" / "t0" / "tinit".
+            std::string s;
+            for (const auto &md : x.get_manufacturer_datas()) {
+              if (md.uuid.uuid16() == 0x0BA9) {
+                s.assign(md.data.begin(), md.data.end());
+                break;
+              }
+            }
+            std::string type;
+            if (s == "t1") {
+              type = "on";
+            } else if (s == "t0") {
+              type = "off";
+            } else if (s == "tinit") {
+              type = "init";
+            }
+            if (type.empty()) {
+              return;
+            }
+            // The same advertisement is re-broadcast (and may be sent more
+            // than once) to ensure it is received, so the scanner sees the
+            // same payload many times. Consecutive real advertisements always
+            // carry a different type, so skip any repeat of the last triggered
+            // type within the debounce window to fire only once per real
+            // advertisement. If the same type reappears after the window it is
+            // treated as a new advertisement (covers a fully lost ad in
+            // between).
+            static std::string last_type;
+            static uint32_t last_ms = 0;
+            uint32_t now = millis();
+            if (type == last_type && (now - last_ms) < 5000) {
+              return;
+            }
+            last_type = type;
+            last_ms = now;
+            id(shelly_relay_input).trigger(type);
+
+event:
+  - platform: template
+    id: shelly_relay_input
+    name: "Shelly Relay Input"
+    event_types:
+      - "init"
+      - "on"
+      - "off"
+    on_event:
+      then:
+        - lambda: |-
+            ESP_LOGI("shelly_relay_input", "Event triggered: %s", event_type.c_str());
+            if (event_type == "on" || event_type == "off") {
+              id(input_change_actions).execute();
+            }
+
+text:
+  # MAC of the Shelly relay, matched at runtime in the on_ble_advertise
+  # lambda above. Edit it from the ESPHome web UI; the value persists
+  # across reboots. Any hex format is accepted (AA:AA:AA:AA:AA:AA,
+  # aaaaaaaaaaaa, ...).
+  - platform: template
+    id: shelly_relay_mac
+    name: "Shelly Relay MAC"
+    restore_value: true
+    initial_value: ${default_shelly_relay_mac}
+    icon: mdi:bluetooth
+    entity_category: config
+    mode: text
+    optimistic: true
+    max_length: 17
