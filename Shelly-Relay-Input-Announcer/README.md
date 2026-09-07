@@ -66,5 +66,30 @@ Example in `web_server`:
 
 NB: If you set the default in the config in the optional step mentioned above then it should be already set to your correct MAC address.
 
-## Debugging and/or more complicated setups.
+## Debugging and/or more complicated setups
 There is also an Event component that will report events of type `init` / `on` / `off` which can be used for more complicated or specific automations from Home Assistant. It is also good debugging tool.
+
+## Example from Personal setup
+```
+packages:
+  shelly_relay_control: github://MichaelMKKelly/Shelly-and-ESPHome-BLE-Interaction-Tool-Kit/Shelly-Relay-Input-Announcer/shelly-relay-control.yml@main
+  
+Script:
+  - id: input_change_actions
+    then:
+      # Toggle Light status
+      - light.toggle:
+          id: rgbww_light
+      # Wait for light to transition
+      - delay: 1500ms
+      # Check to see if light was switched on and set it to a default value
+      - if:
+          condition:
+            lambda: 'return id(rgbww_light).current_values.is_on();'
+          then:
+            - logger.log: "was swtich on setting default"
+            - light.turn_on:
+                id: rgbww_light
+                brightness: 90%
+                color_temperature: 3800K
+  ```
